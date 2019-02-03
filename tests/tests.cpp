@@ -66,7 +66,7 @@ TEST_CASE("Move semantics", "[construct]") {
 }
 
 TEST_CASE("Construct Func", "[construct]") {
-	auto r = construct<Rect>(1, 2, 3);
+	auto r = construct<Rect>(1, 2, std::make_unique<int>(3));
 	REQUIRE(r.x == 1);
 	REQUIRE(r.y == 2);
 	REQUIRE(r.yay != nullptr);
