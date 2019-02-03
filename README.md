@@ -57,7 +57,7 @@ int main() {
 
 ### Installing
 As the library is header only, just copy `named_init.h` into your source tree and include it.
-Requires C++17.
+Requires C++17, it is known to compile on gcc.
 
 ## Running the tests
 The tests rely on meson and catch2, although catch2 is included in the source tree.
