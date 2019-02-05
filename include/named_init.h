@@ -13,18 +13,23 @@ template <int Idx> struct Rank : Rank<Idx - 1> {};
 template <> struct Rank<0> {};
 
 struct Empty {};
-template <class T, class = void> struct HasFieldPtr : std::false_type {};
-template <class T>
-struct HasFieldPtr<T, std::void_t<decltype(T::field_ptr)>> : std::true_type {};
+template <class Parent, class T, class = void> struct HasFieldPtr : std::false_type {};
+template <class Parent, class T>
+struct HasFieldPtr<Parent, T, std::void_t<decltype(T::field_ptr, std::is_same<typename T::ParentType, Parent>())>> : std::true_type {};
 
 template <class T, class = void> struct HasEnabledBraced : std::false_type {};
 template <class T>
 struct HasEnabledBraced<T, std::void_t<typename T::ZIMPL_HAS_ENABLED_BRACED>>
     : std::true_type {};
 
-template <class... Args> struct BaseFieldTraits {
-	static constexpr bool allof = (HasFieldPtr<Args>::value && ... && true);
-	static constexpr bool oneof = (HasFieldPtr<Args>::value || ... || false);
+template<class Parent, class T, class = std::enable_if_t<HasFieldPtr<Parent, T>::value>> 
+struct FieldPtrEnabler {
+    using type = T;
+};
+
+template <class Parent, class... Args> struct BaseFieldTraits {
+	static constexpr bool allof = (HasFieldPtr<Parent, Args>::value && ... && true);
+	static constexpr bool oneof = (HasFieldPtr<Parent, Args>::value || ... || false);
 };
 
 template <int Idx, class T> void orderedConstruct(T &) {
@@ -49,7 +54,7 @@ template <class T, class... Args> void construct(T &out, Args &&... args) {
 	else if constexpr (!traits::oneof) {
 
 		using braced = HasEnabledBraced<T>;
-		if constexpr (braced::value)
+		if constexpr (braced::value && !std::is_constructible<T, Args...>::value)
 			orderedConstruct<0>(out, std::forward<Args>(args)...);
 		else
 			out = T{std::forward<Args>(args)...};
@@ -68,7 +73,7 @@ template <class T, class... Args> T construct(Args &&... args) {
 		void construct(ZIMPL_TYPE_NAME &type) {                                    \
 			type.*field_ptr = std::move(val);                                        \
 		}                                                                          \
-		decltype(NAME) val;                                                        \
+		decltype(NAME) val;  using ParentType = ZIMPL_TYPE_NAME;                                                      \
 		static constexpr decltype(NAME) ZIMPL_TYPE_NAME::*field_ptr =              \
 		    &ZIMPL_TYPE_NAME::NAME;                                                \
 	};                                                                           \
@@ -100,7 +105,7 @@ template <class T, class... Args> T construct(Args &&... args) {
 #define ENABLE_BRACED_INIT(NAME)                                               \
 	using ZIMPL_HAS_ENABLED_BRACED = void;                                       \
 	NAME() = default;                                                            \
-	template <class... Args> NAME(Args &&... args) {                             \
+	template <class... Args> NAME(typename detail::FieldPtrEnabler<ZIMPL_TYPE_NAME, Args>::type&&... args) {                             \
 		detail::construct<NAME>(*this, std::forward<Args>(args)...);               \
 	}
 
