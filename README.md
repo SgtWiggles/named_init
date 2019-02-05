@@ -45,7 +45,7 @@ int main() {
 
 	auto r3 = Fancy{ y_{11}, x_{10} }; // With named arguments in any order
 	assert(r3.x == 10);
-	assert(r3.x == 11);
+	assert(r3.y == 11);
 
 	auto r4 = Fancy{1, 2, 3}; // Call user defined constructor
 	assert(r4.x == 1);
